@@ -15,4 +15,8 @@ export default class RedisAdapter implements Cache {
   async get(key: string): Promise<any> {
     return await this.redis.get(key);
   }
+
+  async inc(key: string): Promise<void> {
+    return await this.inc(key);
+  }
 }

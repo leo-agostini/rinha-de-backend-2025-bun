@@ -1,26 +1,31 @@
 services:
   nginx:
-    image: nginx:1.25-alpine
-    container_name: rinha-nginx
+    image: nginx:latest
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
       - api1
       - api2
     ports:
+        # Obrigatório expor/usar a porta 9999 no load balancer!
       - "9999:9999"
     networks:
       - backend
-      - payment-processor
+      - payment-processor 
     deploy:
       resources:
         limits:
-          cpus: "0.15"
-          memory: "15MB"
+          cpus: "0.17"
+          memory: "10MB"
 
   api1: &api
-    image: luizcordista/rinha-backend-2025:tag
+    build: .
     hostname: api1
+    ports:
+      - "8081:8080"
+    networks:
+      - backend
+      - payment-processor
     environment:
       - APP_PORT=8080
       - REDIS_URL=redis:6379
@@ -28,9 +33,6 @@ services:
       - PROCESSOR_FALLBACK_URL=http://payment-processor-fallback:8080
       - INSTANCE_ID=API-1
       - WORKER_CONCURRENCY=16
-    networks:
-      - backend
-      - payment-processor
     depends_on:
       redis:
         condition: service_healthy
@@ -50,10 +52,14 @@ services:
       - PROCESSOR_FALLBACK_URL=http://payment-processor-fallback:8080
       - INSTANCE_ID=API-2
       - WORKER_CONCURRENCY=16
+    ports:
+      - "8082:8080"
 
   redis:
     image: redis:7.2-alpine
     container_name: rinha-redis
+    ports:
+      - "6379:6379"
     command: redis-server --save "" --appendonly no --maxclients 20000
     networks:
       - backend
