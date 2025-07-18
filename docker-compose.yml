@@ -15,8 +15,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.17"
-          memory: "10MB"
+          cpus: "0.15"
+          memory: "20MB"
 
   api1: &api
     build: .
@@ -36,11 +36,13 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+      postgres:
+        condition: service_healthy
     deploy:
       resources:
         limits:
-          cpus: "0.55"
-          memory: "30MB"
+          cpus: "0.40"
+          memory: "80MB"
 
   api2:
     <<: *api
@@ -71,8 +73,32 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.25"
-          memory: "275MB"
+          cpus: "0.20"
+          memory: "20MB"
+  postgres:
+    image: postgres:16-alpine
+    container_name: rinha-postgres
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "rinha"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5432:5432"
+    networks:
+      - backend
+    environment:
+      - POSTGRES_USER=rinha
+      - POSTGRES_PASSWORD=rinha
+      - POSTGRES_DB=rinha
+    volumes:
+      - "./scripts/init.sql:/docker-entrypoint-initdb.d/script.sql"
+      - ./postgres-data:/var/lib/postgresql/data
+    deploy:
+      resources:
+        limits:
+          cpus: "0.35"
+          memory: "150MB"
 
 networks:
   backend:

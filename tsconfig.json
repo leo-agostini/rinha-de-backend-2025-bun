@@ -13,6 +13,7 @@
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": false,
     "noEmit": true,
+    "noImplicitAny": false,
 
     // Best practices
     "strict": true,

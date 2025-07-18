@@ -4,15 +4,15 @@ import { sleep } from "k6";
 import exec from "k6/execution";
 import { Counter } from "k6/metrics";
 import {
-  token,
-  setPPToken,
+  getBackendPaymentsSummary,
+  getPPPaymentsSummary,
+  requestBackendPayment,
+  resetBackendDatabase,
+  resetPPDatabase,
   setPPDelay,
   setPPFailure,
-  resetPPDatabase,
-  getPPPaymentsSummary,
-  resetBackendDatabase,
-  getBackendPaymentsSummary,
-  requestBackendPayment
+  setPPToken,
+  token
 } from "./requests.js";
 
 export const options = {
@@ -21,10 +21,10 @@ export const options = {
     "count",
   ],
   thresholds: {
-    //http_req_failed: [{ threshold: "rate < 0.01", abortOnFail: false }],
-    //payments_inconsistency: ["count == 0"]
-    //http_req_duration: ['p(99) < 50'],
-    //payments_count: ['count > 3500'],
+    // http_req_failed: [{ threshold: "rate < 0.01", abortOnFail: false }],
+    // payments_inconsistency: ["count == 0"],
+    // http_req_duration: ['p(99) < 50'],
+    // payments_count: ['count > 3500'],
   },
   scenarios: {
     payments: {

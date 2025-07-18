@@ -1,11 +1,5 @@
-export enum CircuitBreakerStatus {
-  CLOSED,
-  HALF_OPEN,
-  OPEN,
-}
-
-export default interface CircuitBreakerState {
-  state: CircuitBreakerStatus;
-  failureCount: number;
-  resetAfter: number;
+export enum CircuitBreakerState {
+  CLOSED = "CLOSED",
+  HALF_OPEN = "HALF_OPEN",
+  OPEN = "OPEN",
 }
