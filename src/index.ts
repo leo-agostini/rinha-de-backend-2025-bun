@@ -1,90 +1,106 @@
-import Fastify from "fastify";
+import { serve } from "bun";
 import CircuitBreaker from "./infra/circuit-breaker";
-import CircuitPaymentProcessor from "./infra/circuit-payment-processor";
-import HttpClient from "./infra/httpClient";
-import PaymentProcessor from "./infra/payment-processor";
-import PaymentProcessorFallback from "./infra/payment-processor-fallback";
-import PaymentRepository from "./infra/payment-repository";
-import { DatabasePgConnectionAdapter } from "./infra/postgres-adapter";
-import RedisAdapter from "./infra/redis-adapter";
-import PaymentDTO from "./types/payment-dto";
+import PaymentsController from "./infra/controllers/payments-controller";
+import PaymentsSummaryController from "./infra/controllers/payments-summary-controller";
+import DatabasePgConnectionAdapter from "./infra/database/postgres-adapter";
+import RedisAdapter from "./infra/database/redis-adapter";
+import CircuitPaymentProcessor from "./infra/http/circuit-payment-processor";
+import HttpClient from "./infra/http/httpClient";
+import PaymentProcessorDefault from "./infra/http/payment-processor-default";
+import PaymentProcessorFallback from "./infra/http/payment-processor-fallback";
+import BullMqAdapter from "./infra/queue/queue";
+import PaymentRepository from "./infra/repository/payment-repository";
+import ProcessPaymentWorker from "./infra/workers/process-payment-worker";
+import SaveProcessedPaymentWorker from "./infra/workers/save-processed-payment-worker";
 import ProcessPaymentUseCase from "./use-cases/process-payment-use-case";
+import SaveProcessedPaymentUseCase from "./use-cases/save-processed-payment-use-case";
 
 (async () => {
-  const postgres = new DatabasePgConnectionAdapter();
-  const redis = new RedisAdapter();
-  await redis.connect();
+  const processPaymentQueueName = `process-payment-queue-${process.env.INSTANCE_ID}`;
+  const processPaymentQueue = new BullMqAdapter(processPaymentQueueName, 1);
 
-  const defaultCircuitBreaker = new CircuitBreaker({
-    key: "payment-processor",
-    failureThreshold: 3,
-    failureTimeout: 3000,
-    storage: redis,
-  });
+  const createPaymentQueueName = `create-payment-queue-${process.env.INSTANCE_ID}`;
+  const createPaymentQueue = new BullMqAdapter(createPaymentQueueName, 2);
 
-  await defaultCircuitBreaker.initialize();
+  const paymentRepository = new PaymentRepository(DatabasePgConnectionAdapter);
 
-  const fallbackCircuitBreaker = new CircuitBreaker({
-    key: "payment-processor-fallback",
-    failureThreshold: 3,
-    failureTimeout: 3000,
-    storage: redis,
-  });
+  const paymentsController = new PaymentsController(processPaymentQueue);
 
-  await fallbackCircuitBreaker.initialize();
-
-  const httpClient = new HttpClient();
-
-  const defaultPaymentGateway = new PaymentProcessor(httpClient);
-  const fallbackPaymentGateway = new PaymentProcessorFallback(httpClient);
-
-  const circuitPaymentProcessor = new CircuitPaymentProcessor(
-    defaultPaymentGateway,
-    defaultCircuitBreaker
-  );
-
-  const circuitPaymentProcessorFallback = new CircuitPaymentProcessor(
-    fallbackPaymentGateway,
-    fallbackCircuitBreaker
-  );
-
-  const paymentRepository = new PaymentRepository(postgres);
-
-  const processPaymentService = new ProcessPaymentUseCase(
-    circuitPaymentProcessor,
-    circuitPaymentProcessorFallback,
+  const paymentsSummaryController = new PaymentsSummaryController(
     paymentRepository
   );
 
-  const fastify = Fastify({
-    logger: true,
+  const httpClient = new HttpClient();
+  const redis = new RedisAdapter();
+
+  const circuitBreakerDefault = new CircuitBreaker({
+    failureThreshold: 3,
+    failureTimeout: 3,
+    storage: redis,
+    key: "payment-processor-default",
   });
 
-  fastify.get("/", function (request, reply) {
-    reply.send({ hello: "world" });
+  const circuitBreakerFallback = new CircuitBreaker({
+    failureThreshold: 3,
+    failureTimeout: 3,
+    storage: redis,
+    key: "payment-processor-fallback",
   });
 
-  fastify.post("/payments", async (request, reply) => {
-    const payment = {
-      ...(request.body as any),
-      requestedAt: new Date().toISOString(),
-    } as PaymentDTO;
-    await processPaymentService.execute(payment);
-    reply.send({ message: "Payment processed" }).status(201);
+  await redis.connect();
+  await circuitBreakerDefault.initialize();
+  await circuitBreakerFallback.initialize();
+
+  const paymentProcessorGatewayDefault = new PaymentProcessorDefault(
+    httpClient
+  );
+
+  const paymentProcessorGatewayFallback = new PaymentProcessorFallback(
+    httpClient
+  );
+
+  const paymentGatewayDefault = new CircuitPaymentProcessor(
+    paymentProcessorGatewayDefault,
+    circuitBreakerDefault
+  );
+
+  const paymentGatewayFallback = new CircuitPaymentProcessor(
+    paymentProcessorGatewayFallback,
+    circuitBreakerFallback
+  );
+
+  const processPaymentUseCase = new ProcessPaymentUseCase(
+    paymentGatewayDefault,
+    paymentGatewayFallback,
+    createPaymentQueue
+  );
+
+  const saveProcessedPaymentUseCase = new SaveProcessedPaymentUseCase(
+    paymentRepository
+  );
+
+  const processPaymentWorker = new ProcessPaymentWorker(
+    processPaymentQueue,
+    processPaymentUseCase
+  );
+  const saveProcessedPaymentWorker = new SaveProcessedPaymentWorker(
+    createPaymentQueue,
+    saveProcessedPaymentUseCase
+  );
+
+  await processPaymentWorker.init();
+  await saveProcessedPaymentWorker.init();
+
+  serve({
+    hostname: process.env.APP_HOST,
+    port: Number(process.env.PORT),
+    reusePort: true,
+    routes: {
+      "/": new Response("Hello World", { status: 200 }),
+      "/payments-summary": (req) => paymentsSummaryController.execute(req),
+      "/payments": { POST: (req) => paymentsController.execute(req) },
+    },
   });
 
-  fastify.get("/payments-summary", async (request, reply) => {
-    const query = request.query as any;
-    const payments = await paymentRepository.summary(query.from, query.to);
-
-    reply.send(payments).status(200);
-  });
-
-  fastify.listen({ port: 8080, host: "0.0.0.0" }, function (err, address) {
-    if (err) {
-      console.log(err);
-      fastify.log.error(err);
-      process.exit(1);
-    }
-  });
+  console.log(`Server listening on PORT: ${process.env.PORT}`);
 })();

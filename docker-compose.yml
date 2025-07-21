@@ -27,12 +27,18 @@ services:
       - backend
       - payment-processor
     environment:
-      - APP_PORT=8080
-      - REDIS_URL=redis:6379
-      - PROCESSOR_DEFAULT_URL=http://payment-processor-default:8080
-      - PROCESSOR_FALLBACK_URL=http://payment-processor-fallback:8080
+      - REDIS_URL:${REDIS_URL}
+      - PAYMENT_PROCESSOR_DEFAULT_URL:${PAYMENT_PROCESSOR_DEFAULT_URL}
+      - PAYMENT_PROCESSOR_FALLBACK_URL:${PAYMENT_PROCESSOR_FALLBACK_URL}
+      - POSTGRES_HOST:${POSTGRES_HOST}
+      - POSTGRES_DATABASE:${POSTGRES_DATABASE}
+      - POSTGRES_USER:${POSTGRES_USER}
+      - POSTGRES_PASSWORD:${POSTGRES_PASSWORD}
+      - POSTGRES_PORT:${POSTGRES_PORT}
+      - APP_HOST=0.0.0.0
+      - PORT=8080
       - INSTANCE_ID=API-1
-      - WORKER_CONCURRENCY=16
+
     depends_on:
       redis:
         condition: service_healthy
@@ -41,19 +47,14 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.40"
-          memory: "80MB"
+          cpus: "0.30"
+          memory: "70MB"
 
   api2:
     <<: *api
     hostname: api2
     environment:
-      - APP_PORT=8080
-      - REDIS_URL=redis:6379
-      - PROCESSOR_DEFAULT_URL=http://payment-processor-default:8080
-      - PROCESSOR_FALLBACK_URL=http://payment-processor-fallback:8080
       - INSTANCE_ID=API-2
-      - WORKER_CONCURRENCY=16
     ports:
       - "8082:8080"
 
@@ -74,7 +75,7 @@ services:
       resources:
         limits:
           cpus: "0.20"
-          memory: "20MB"
+          memory: "40MB"
   postgres:
     image: postgres:16-alpine
     container_name: rinha-postgres
@@ -97,7 +98,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.35"
+          cpus: "0.45"
           memory: "150MB"
 
 networks:

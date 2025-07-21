@@ -1,46 +1,19 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TYPE processor AS ENUM ('default', 'fallback');
+CREATE TYPE payment_status AS ENUM ('pending', 'completed');
+
 CREATE UNLOGGED TABLE IF NOT EXISTS transactions (
     id SERIAL PRIMARY KEY NOT NULL,
     correlation_id UUID UNIQUE NOT NULL,
     requested_at TIMESTAMP NOT NULL,
     amount decimal(10, 2) NOT NULL,
-    processor processor NOT NULL
+    processor processor,
+    payment_status payment_status NOT NULL DEFAULT 'pending'
 );
 
-CREATE INDEX idx_transactions ON transactions (requested_at, processor);
 
-CREATE OR REPLACE FUNCTION summary(
-    from_date TIMESTAMP,
-    to_date TIMESTAMP
-)
-RETURNS json
-LANGUAGE plpgsql
-AS $$
-DECLARE 
-  ret json;
-BEGIN
-    SELECT json_build_object (
-        'default', (
-            SELECT to_json(sld) FROM (
-                SELECT COUNT(*) AS "totalRequests", SUM(amount) AS "totalAmount"
-                FROM transactions WHERE requested_at BETWEEN from_date AND to_date AND processor = 'default'
-            ) sld
-        ),
-        'fallback',(
-            SELECT to_json(sld) FROM (
-                SELECT COUNT(*) AS "totalRequests", SUM(amount) AS "totalAmount"
-                FROM transactions WHERE requested_at BETWEEN from_date AND to_date AND processor = 'fallback'
-            ) sld
-        )
-    ) INTO ret;
-    IF NOT FOUND THEN
-        ret := NULL;
-    END IF;
-    RETURN ret;
-END
-$$;
+CREATE INDEX idx_transactions ON transactions (requested_at, processor, payment_status);
 
 -- WARNING
 -- this tool not being optimal
@@ -50,11 +23,11 @@ $$;
 -- OS Type: linux
 -- DB Type: oltp
 -- Total Memory (RAM): 150 MB
--- Connections num: 70
+-- Connections num: 80
 -- Data Storage: ssd
 
 ALTER SYSTEM SET
- max_connections = '70';
+ max_connections = '80';
 ALTER SYSTEM SET
  shared_buffers = '38400kB';
 ALTER SYSTEM SET
@@ -72,7 +45,7 @@ ALTER SYSTEM SET
 ALTER SYSTEM SET
  effective_io_concurrency = '200';
 ALTER SYSTEM SET
- work_mem = '274kB';
+ work_mem = '436kB';
 ALTER SYSTEM SET
  huge_pages = 'off';
 ALTER SYSTEM SET

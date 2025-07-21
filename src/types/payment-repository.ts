@@ -1,8 +1,15 @@
-import PaymentDTO from "./payment-dto";
+import { PaymentDAO } from "./payment-dto";
+import ProcessorEnum from "./processor";
+import StatusEnum from "./status";
+import Summary from "./summary";
 
+type UpdateParams = {
+  id: string;
+  processor: ProcessorEnum;
+  status: StatusEnum;
+};
 export default interface IPaymentRepository {
-  create(
-    payment: PaymentDTO & { processor: "default" | "fallback" }
-  ): Promise<void>;
-  summary(startDate: string, endDate: string): Promise<void>;
+  create(payment: PaymentDAO): Promise<void>;
+  update(params: UpdateParams): Promise<void>;
+  summary(from: string, to: string): Promise<Summary>;
 }

@@ -1,4 +1,4 @@
-export interface Summary {
+export default interface Summary {
   default: {
     totalRequests: number;
     totalAmount: number;

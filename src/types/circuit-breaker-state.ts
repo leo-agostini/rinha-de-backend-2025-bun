@@ -1,5 +1,7 @@
-export enum CircuitBreakerState {
+enum CircuitBreakerState {
   CLOSED = "CLOSED",
-  HALF_OPEN = "HALF_OPEN",
   OPEN = "OPEN",
+  HALF_OPEN = "HALF_OPEN",
 }
+
+export default CircuitBreakerState;

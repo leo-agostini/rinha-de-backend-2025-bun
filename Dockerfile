@@ -1,9 +1,17 @@
-FROM oven/bun:latest
+# Stage 1: build
+FROM oven/bun AS builder
 
 WORKDIR /app
-COPY package.json ./
-COPY bun.lock ./
-COPY src ./
-COPY .env ./
-RUN bun install
-CMD ["bun", "run", "index.ts"]
+COPY . .
+RUN bun build --compile --minify --sourcemap ./src/index.ts --outfile server
+
+# Stage 2: runtime
+FROM oven/bun
+
+WORKDIR /app
+COPY --from=builder /app/server .
+COPY .env .
+
+RUN chmod +x ./server
+
+CMD ["./server"]
