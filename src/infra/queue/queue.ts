@@ -1,7 +1,7 @@
 import { Queue } from "bullmq";
 
 export default class BullMqAdapter {
-  private readonly queue: Queue;
+  readonly queue: Queue;
 
   constructor(readonly queueName: string, readonly db = 1) {
     this.queue = new Queue(queueName, {
@@ -17,7 +17,6 @@ export default class BullMqAdapter {
     await this.queue.add(jobName, data, {
       removeOnComplete: true,
       jobId: data.correlationId,
-      removeOnFail: { count: 3 },
       backoff: {
         type: "fixed",
         delay: 3000,

@@ -27,7 +27,7 @@ CREATE INDEX idx_transactions ON transactions (requested_at, processor, payment_
 -- Data Storage: ssd
 
 ALTER SYSTEM SET
- max_connections = '80';
+ max_connections = '550';
 ALTER SYSTEM SET
  shared_buffers = '38400kB';
 ALTER SYSTEM SET

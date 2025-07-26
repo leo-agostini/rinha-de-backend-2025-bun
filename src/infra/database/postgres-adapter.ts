@@ -6,7 +6,7 @@ export interface DatabaseConnection {
   query(query: string, args: Primitive[]): Promise<QueryResult<any>>;
 }
 
-class DatabasePgConnectionAdapter implements DatabaseConnection {
+export default class DatabasePgConnectionAdapter implements DatabaseConnection {
   pool: Pool;
 
   constructor() {
@@ -38,5 +38,3 @@ class DatabasePgConnectionAdapter implements DatabaseConnection {
     return result;
   }
 }
-
-export default new DatabasePgConnectionAdapter();

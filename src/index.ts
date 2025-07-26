@@ -13,21 +13,30 @@ import PaymentRepository from "./infra/repository/payment-repository";
 import ProcessPaymentWorker from "./infra/workers/process-payment-worker";
 import SaveProcessedPaymentWorker from "./infra/workers/save-processed-payment-worker";
 import ProcessPaymentUseCase from "./use-cases/process-payment-use-case";
-import SaveProcessedPaymentUseCase from "./use-cases/save-processed-payment-use-case";
+import SaveProcessedPaymentUseCase from "./use-cases/save-processed-payment-batch";
 
 (async () => {
+  const writeDatabaseConnection = new DatabasePgConnectionAdapter();
+  const readDatabaseConnection = new DatabasePgConnectionAdapter();
   const processPaymentQueueName = `process-payment-queue-${process.env.INSTANCE_ID}`;
   const processPaymentQueue = new BullMqAdapter(processPaymentQueueName, 1);
 
   const createPaymentQueueName = `create-payment-queue-${process.env.INSTANCE_ID}`;
-  const createPaymentQueue = new BullMqAdapter(createPaymentQueueName, 2);
+  const saveProcessedPaymentScheduler = new BullMqAdapter(
+    createPaymentQueueName,
+    2
+  );
+  saveProcessedPaymentScheduler.queue.upsertJobScheduler("save-job", {
+    every: 50,
+  });
 
-  const paymentRepository = new PaymentRepository(DatabasePgConnectionAdapter);
+  const writePaymentRepository = new PaymentRepository(writeDatabaseConnection);
+  const readPaymentRepository = new PaymentRepository(readDatabaseConnection);
 
   const paymentsController = new PaymentsController(processPaymentQueue);
 
   const paymentsSummaryController = new PaymentsSummaryController(
-    paymentRepository
+    readPaymentRepository
   );
 
   const httpClient = new HttpClient();
@@ -72,11 +81,12 @@ import SaveProcessedPaymentUseCase from "./use-cases/save-processed-payment-use-
   const processPaymentUseCase = new ProcessPaymentUseCase(
     paymentGatewayDefault,
     paymentGatewayFallback,
-    createPaymentQueue
+    redis
   );
 
   const saveProcessedPaymentUseCase = new SaveProcessedPaymentUseCase(
-    paymentRepository
+    writePaymentRepository,
+    redis
   );
 
   const processPaymentWorker = new ProcessPaymentWorker(
@@ -84,7 +94,7 @@ import SaveProcessedPaymentUseCase from "./use-cases/save-processed-payment-use-
     processPaymentUseCase
   );
   const saveProcessedPaymentWorker = new SaveProcessedPaymentWorker(
-    createPaymentQueue,
+    saveProcessedPaymentScheduler,
     saveProcessedPaymentUseCase
   );
 

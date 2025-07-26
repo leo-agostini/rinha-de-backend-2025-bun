@@ -10,6 +10,7 @@ type UpdateParams = {
 };
 export default interface IPaymentRepository {
   create(payment: PaymentDAO): Promise<void>;
+  createMany(payment: PaymentDAO[]): Promise<void>;
   update(params: UpdateParams): Promise<void>;
   summary(from: string, to: string): Promise<Summary>;
 }

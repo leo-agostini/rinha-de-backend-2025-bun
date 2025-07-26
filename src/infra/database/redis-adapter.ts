@@ -40,4 +40,16 @@ export default class RedisAdapter implements Cache {
   ): Promise<void> {
     await this.redis.zAdd(key, value);
   }
+
+  async lPush(key: string, value: string) {
+    return this.redis.rPush(key, value);
+  }
+
+  async lRange(key, start, stop) {
+    return this.redis.lRange(key, start, stop);
+  }
+
+  async lTrim(key, start, stop) {
+    return this.redis.lTrim(key, start, stop);
+  }
 }

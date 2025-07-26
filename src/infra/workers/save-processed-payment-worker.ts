@@ -1,5 +1,5 @@
-import { Job, Worker } from "bullmq";
-import SaveProcessedPaymentUseCase from "../../use-cases/save-processed-payment-use-case";
+import { Worker } from "bullmq";
+import SaveProcessedPaymentUseCase from "../../use-cases/save-processed-payment-batch";
 import BullMqAdapter from "../queue/queue";
 
 export default class SaveProcessedPaymentWorker {
@@ -8,9 +8,9 @@ export default class SaveProcessedPaymentWorker {
     private readonly saveProcessedPaymentUseCase: SaveProcessedPaymentUseCase
   ) {}
 
-  async execute(job: Job) {
+  async execute() {
     try {
-      await this.saveProcessedPaymentUseCase.execute(job.data);
+      await this.saveProcessedPaymentUseCase.execute();
     } catch (error) {
       console.log(error);
       throw error;
@@ -19,7 +19,7 @@ export default class SaveProcessedPaymentWorker {
 
   async init() {
     new Worker(this.queue.queueName, this.execute.bind(this), {
-      concurrency: 20,
+      concurrency: 1,
       connection: { url: process.env.REDIS_URL, db: this.queue.db },
     });
   }

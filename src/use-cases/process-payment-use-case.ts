@@ -1,4 +1,4 @@
-import BullMqAdapter from "../infra/queue/queue";
+import Cache from "../types/cache";
 import PaymentDTO, { PaymentDAO } from "../types/payment-dto";
 import IPaymentGateway from "../types/payment-gateway";
 import ProcessorEnum from "../types/processor";
@@ -8,7 +8,7 @@ export default class ProcessPaymentUseCase {
   constructor(
     private readonly defaultPaymentGateway: IPaymentGateway,
     private readonly fallbackPaymentGateway: IPaymentGateway,
-    private readonly queue: BullMqAdapter
+    private readonly cache: Cache
   ) {}
 
   async execute(payment: PaymentDTO): Promise<void> {
@@ -22,10 +22,15 @@ export default class ProcessPaymentUseCase {
       });
     }
 
-    await this.queue.add("payment-created-on-gateway", {
+    const toSavePayment: PaymentDAO = {
       ...payment,
       processor,
       status: StatusEnum.COMPLETED,
-    } as PaymentDAO);
+    };
+
+    await this.cache.lPush(
+      `${process.env.INSTANCE_ID}:processed-payments`,
+      JSON.stringify(toSavePayment)
+    );
   }
 }

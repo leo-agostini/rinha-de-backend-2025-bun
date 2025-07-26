@@ -23,6 +23,32 @@ export default class PaymentRepository implements IPaymentRepository {
     );
   }
 
+  async createMany(payments: PaymentDAO[]): Promise<void> {
+    if (payments.length === 0) return;
+    const values: any[] = [];
+    const valuePlaceholders = payments.map((p, i) => {
+      const index = i * 5;
+      values.push(
+        p.correlationId,
+        p.requestedAt,
+        p.amount,
+        p.processor,
+        p.status
+      );
+      return `($${index + 1}, $${index + 2}, $${index + 3}, $${index + 4}, $${
+        index + 5
+      })`;
+    });
+
+    const query = `
+    INSERT INTO transactions (correlation_id, requested_at, amount, processor, payment_status)
+    VALUES ${valuePlaceholders.join(", ")}
+    ON CONFLICT (correlation_id) DO NOTHING
+  `;
+
+    await this.database.query(query, values);
+  }
+
   async summary(from: string, to: string): Promise<Summary> {
     const [defaultPayments, fallbackPayments] = (
       await this.database.query(
