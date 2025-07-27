@@ -1,19 +1,16 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TYPE processor AS ENUM ('default', 'fallback');
-CREATE TYPE payment_status AS ENUM ('pending', 'completed');
 
 CREATE UNLOGGED TABLE IF NOT EXISTS transactions (
     id SERIAL PRIMARY KEY NOT NULL,
     correlation_id UUID UNIQUE NOT NULL,
     requested_at TIMESTAMP NOT NULL,
     amount decimal(10, 2) NOT NULL,
-    processor processor,
-    payment_status payment_status NOT NULL DEFAULT 'pending'
+    processor processor
 );
 
-
-CREATE INDEX idx_transactions ON transactions (requested_at, processor, payment_status);
+CREATE INDEX idx_transactions ON transactions (requested_at, processor);
 
 -- WARNING
 -- this tool not being optimal

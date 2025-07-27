@@ -1,7 +1,5 @@
 import { PaymentDAO } from "../../types/payment-dto";
 import IPaymentRepository from "../../types/payment-repository";
-import ProcessorEnum from "../../types/processor";
-import StatusEnum from "../../types/status";
 import Summary from "../../types/summary";
 import { DatabaseConnection } from "../database/postgres-adapter";
 
@@ -18,7 +16,6 @@ export default class PaymentRepository implements IPaymentRepository {
         payment.requestedAt,
         payment.amount,
         payment.processor,
-        payment.status,
       ]
     );
   }
@@ -28,13 +25,7 @@ export default class PaymentRepository implements IPaymentRepository {
     const values: any[] = [];
     const valuePlaceholders = payments.map((p, i) => {
       const index = i * 5;
-      values.push(
-        p.correlationId,
-        p.requestedAt,
-        p.amount,
-        p.processor,
-        p.status
-      );
+      values.push(p.correlationId, p.requestedAt, p.amount, p.processor);
       return `($${index + 1}, $${index + 2}, $${index + 3}, $${index + 4}, $${
         index + 5
       })`;
@@ -55,7 +46,7 @@ export default class PaymentRepository implements IPaymentRepository {
         `
         SELECT processor, COUNT(*) AS "totalRequests", SUM(amount) AS "totalAmount"
         FROM transactions
-        WHERE requested_at BETWEEN $1 AND $2 AND payment_status = 'completed' AND processor IS NOT NULL 
+        WHERE requested_at BETWEEN $1 AND $2 AND processor IS NOT NULL 
         GROUP BY processor
         ORDER BY processor
       `,
@@ -72,25 +63,5 @@ export default class PaymentRepository implements IPaymentRepository {
         totalRequests: Number(fallbackPayments?.totalRequests) || 0,
       },
     };
-  }
-
-  async update({
-    id,
-    processor,
-    status,
-  }: {
-    id: string;
-    processor: ProcessorEnum;
-    status: StatusEnum;
-  }) {
-    await this.database.query(
-      `UPDATE transactions
-        SET
-        payment_status = $1,
-        processor = $2
-        WHERE correlation_id = $3 AND status = 'pending';
-      `,
-      [status, processor, id]
-    );
   }
 }

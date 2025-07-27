@@ -1,16 +1,12 @@
-import { Job, Worker } from "bullmq";
-import ProcessPaymentUseCase from "../../use-cases/process-payment-use-case";
-import BullMqAdapter from "../queue/queue";
+import config from "../../config";
+import ProcessPaymentUseCase from "../../use-cases/process-payment";
 
 export default class ProcessPaymentWorker {
-  constructor(
-    private readonly queue: BullMqAdapter,
-    private readonly processPaymentUseCase: ProcessPaymentUseCase
-  ) {}
+  constructor(private readonly processPaymentUseCase: ProcessPaymentUseCase) {}
 
-  async execute(job: Job) {
+  async execute() {
     try {
-      await this.processPaymentUseCase.execute(job.data);
+      await this.processPaymentUseCase.execute();
     } catch (error) {
       console.log(error);
       throw error;
@@ -18,9 +14,9 @@ export default class ProcessPaymentWorker {
   }
 
   async init() {
-    new Worker(this.queue.queueName, this.execute.bind(this), {
-      concurrency: 1,
-      connection: { url: process.env.REDIS_URL, db: this.queue.db },
-    });
+    while (true) {
+      await this.execute();
+      await Bun.sleep(config.workers.processPayments.interval);
+    }
   }
 }

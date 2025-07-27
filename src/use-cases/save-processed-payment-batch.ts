@@ -1,8 +1,9 @@
+import config from "../config";
 import Cache from "../types/cache";
 import IPaymentRepository from "../types/payment-repository";
 
 const [start, stop] = [0, 100];
-const key = `${process.env.INSTANCE_ID}:processed-payments`;
+const key = config.workers.saveProcessedPayments.queueName;
 export default class SaveProcessedPaymentBatchUseCase {
   constructor(
     private readonly paymentRepository: IPaymentRepository,

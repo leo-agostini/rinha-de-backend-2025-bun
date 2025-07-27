@@ -1,5 +1,4 @@
 import ProcessorEnum from "./processor";
-import StatusEnum from "./status";
 
 export default interface PaymentDTO {
   correlationId: string;
@@ -9,5 +8,4 @@ export default interface PaymentDTO {
 
 export interface PaymentDAO extends PaymentDTO {
   processor: ProcessorEnum;
-  status: StatusEnum;
 }

@@ -1,4 +1,5 @@
 import Redis, { RedisClientType } from "redis";
+import config from "../../config";
 import Cache from "../../types/cache";
 
 export default class RedisAdapter implements Cache {
@@ -6,8 +7,8 @@ export default class RedisAdapter implements Cache {
 
   constructor() {
     this.redis = Redis.createClient({
-      url: process.env.REDIS_URL,
-      database: 0,
+      url: config.redis.url,
+      database: config.redis.db,
     });
   }
 
@@ -34,13 +35,6 @@ export default class RedisAdapter implements Cache {
     return this.redis.eval(script, options);
   }
 
-  async add(
-    key: string,
-    value: { score: number; value: string }[]
-  ): Promise<void> {
-    await this.redis.zAdd(key, value);
-  }
-
   async lPush(key: string, value: string) {
     return this.redis.rPush(key, value);
   }
@@ -51,5 +45,9 @@ export default class RedisAdapter implements Cache {
 
   async lTrim(key, start, stop) {
     return this.redis.lTrim(key, start, stop);
+  }
+
+  async pop(key: string) {
+    return this.redis.rPop(key);
   }
 }

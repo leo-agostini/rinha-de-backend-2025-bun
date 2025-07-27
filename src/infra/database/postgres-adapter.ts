@@ -1,4 +1,5 @@
 import { Pool, QueryResult } from "pg";
+import config from "../../config";
 
 type Primitive = string | number;
 
@@ -11,15 +12,15 @@ export default class DatabasePgConnectionAdapter implements DatabaseConnection {
 
   constructor() {
     this.pool = new Pool({
-      host: "host.docker.internal",
-      database: process.env.POSTGRES_DATABASE,
-      user: process.env.POSTGRES_USER,
-      password: process.env.POSTGRES_PASSWORD,
-      port: Number(process.env.POSTGRES_PORT),
-      min: 10,
-      max: 25,
-      idleTimeoutMillis: 1000,
-      query_timeout: 10000,
+      host: config.postgres.host,
+      database: config.postgres.database,
+      user: config.postgres.user,
+      password: config.postgres.password,
+      port: config.postgres.port,
+      min: config.postgres.min,
+      max: config.postgres.max,
+      idleTimeoutMillis: config.postgres.idleTimeoutMillis,
+      query_timeout: config.postgres.query_timeout,
     });
 
     this.pool.on("connect", () => {

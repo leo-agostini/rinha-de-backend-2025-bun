@@ -5,11 +5,11 @@
   "private": true,
   "scripts": {
     "rmdup": "sudo rm -rf postgres-data && docker-compose up --build --force-recreate -d",
+    "rmdup-arm": "sudo rm -rf postgres-data && docker compose up --build --force-recreate -d",
     "dup": "docker-compose up --build --force-recreate -d"
   },
   "dependencies": {
     "axios": "^1.10.0",
-    "bullmq": "^5.56.4",
     "pg": "^8.16.3",
     "redis": "^5.6.0"
   },
