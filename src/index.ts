@@ -1,111 +1,33 @@
 import { serve } from "bun";
-import CircuitBreaker from "./infra/circuit-breaker";
+import { Worker } from "worker_threads";
+import config from "./config";
 import PaymentsController from "./infra/controllers/payments-controller";
 import PaymentsSummaryController from "./infra/controllers/payments-summary-controller";
 import DatabasePgConnectionAdapter from "./infra/database/postgres-adapter";
 import RedisAdapter from "./infra/database/redis-adapter";
-import CircuitPaymentProcessor from "./infra/http/circuit-payment-processor";
-import HttpClient from "./infra/http/httpClient";
-import PaymentProcessorDefault from "./infra/http/payment-processor-default";
-import PaymentProcessorFallback from "./infra/http/payment-processor-fallback";
 import PaymentRepository from "./infra/repository/payment-repository";
-import ProcessPaymentWorker from "./infra/workers/process-payment-worker";
-import SaveProcessedPaymentWorker from "./infra/workers/save-processed-payment-worker";
-import ProcessPaymentUseCase from "./use-cases/process-payment";
-import SaveProcessedPaymentUseCase from "./use-cases/save-processed-payment-batch";
-import config from "./config";
 
 (async () => {
-  // #region Infra
-  const httpClient = new HttpClient();
-  const redis = new RedisAdapter();
-  await redis.connect();
-  const writeDatabaseConnection = new DatabasePgConnectionAdapter();
+  const redisAdapter = new RedisAdapter();
+  await redisAdapter.connect();
   const readDatabaseConnection = new DatabasePgConnectionAdapter();
-
-  const writePaymentRepository = new PaymentRepository(writeDatabaseConnection);
   const readPaymentRepository = new PaymentRepository(readDatabaseConnection);
 
-  // #endregion
-
-  // #region Controllers
-
-  const paymentsController = new PaymentsController(redis);
+  const paymentsController = new PaymentsController(redisAdapter);
   const paymentsSummaryController = new PaymentsSummaryController(
     readPaymentRepository
   );
 
-  // #endregion
+  const processWorker = new Worker("./workers/process.js");
+  const saveWorker = new Worker("./workers/save.js");
 
-  // #region Circuit Breaker
+  processWorker.on("message", (msg) => console.log("[process]", msg));
+  processWorker.on("error", (err) => console.error("[process ERROR]", err));
+  processWorker.on("exit", (code) => console.log("[process EXIT]", code));
 
-  const circuitBreakerDefault = new CircuitBreaker({
-    failureThreshold: 3,
-    failureTimeout: 3,
-    storage: redis,
-    key: "payment-processor-default",
-  });
-
-  const circuitBreakerFallback = new CircuitBreaker({
-    failureThreshold: 3,
-    failureTimeout: 3,
-    storage: redis,
-    key: "payment-processor-fallback",
-  });
-
-  await circuitBreakerDefault.initialize();
-  await circuitBreakerFallback.initialize();
-
-  // #endregion
-
-  // #region Payment Processors
-
-  const paymentProcessorGatewayDefault = new PaymentProcessorDefault(
-    httpClient
-  );
-
-  const paymentProcessorGatewayFallback = new PaymentProcessorFallback(
-    httpClient
-  );
-
-  const paymentGatewayDefault = new CircuitPaymentProcessor(
-    paymentProcessorGatewayDefault,
-    circuitBreakerDefault
-  );
-
-  const paymentGatewayFallback = new CircuitPaymentProcessor(
-    paymentProcessorGatewayFallback,
-    circuitBreakerFallback
-  );
-
-  // #endregion
-
-  // #region Use Cases
-
-  const processPaymentUseCase = new ProcessPaymentUseCase(
-    paymentGatewayDefault,
-    paymentGatewayFallback,
-    redis
-  );
-
-  const saveProcessedPaymentUseCase = new SaveProcessedPaymentUseCase(
-    writePaymentRepository,
-    redis
-  );
-
-  // #endregion
-
-  // #region Workers
-
-  const processPaymentWorker = new ProcessPaymentWorker(processPaymentUseCase);
-  const saveProcessedPaymentWorker = new SaveProcessedPaymentWorker(
-    saveProcessedPaymentUseCase
-  );
-
-  await processPaymentWorker.init();
-  await saveProcessedPaymentWorker.init();
-
-  // #endregion
+  saveWorker.on("message", (msg) => console.log("[save]", msg));
+  saveWorker.on("error", (err) => console.error("[save ERROR]", err));
+  saveWorker.on("exit", (code) => console.log("[save EXIT]", code));
 
   serve({
     hostname: config.server.hostname,

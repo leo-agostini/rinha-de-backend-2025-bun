@@ -28,7 +28,6 @@ export default class ProcessPaymentUseCase {
       //   throw error;
       // });
       await this.cache.lPush(toProcessPaymentsQueueName, payment);
-      throw error;
     }
 
     const toSavePayment: PaymentDAO = {

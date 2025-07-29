@@ -26,13 +26,11 @@ export default class PaymentRepository implements IPaymentRepository {
     const valuePlaceholders = payments.map((p, i) => {
       const index = i * 5;
       values.push(p.correlationId, p.requestedAt, p.amount, p.processor);
-      return `($${index + 1}, $${index + 2}, $${index + 3}, $${index + 4}, $${
-        index + 5
-      })`;
+      return `($${index + 1}, $${index + 2}, $${index + 3}, $${index + 4})`;
     });
 
     const query = `
-    INSERT INTO transactions (correlation_id, requested_at, amount, processor, payment_status)
+    INSERT INTO transactions (correlation_id, requested_at, amount, processor)
     VALUES ${valuePlaceholders.join(", ")}
     ON CONFLICT (correlation_id) DO NOTHING
   `;

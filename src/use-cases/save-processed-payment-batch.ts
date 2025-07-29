@@ -13,6 +13,7 @@ export default class SaveProcessedPaymentBatchUseCase {
   async execute() {
     const response = await this.cache.lRange(key, start, stop);
     const payments = response.map((payment) => JSON.parse(payment));
+    console.log(payments);
 
     if (payments.length === 0) return;
     await this.paymentRepository.createMany(payments);

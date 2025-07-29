@@ -17,7 +17,7 @@ export default {
     port: Number(process.env.POSTGRES_PORT),
     min: 5,
     max: 10,
-    idleTimeoutMillis: 1000,
+    idleTimeoutMillis: 5000,
     query_timeout: 10000,
   },
   workers: {
