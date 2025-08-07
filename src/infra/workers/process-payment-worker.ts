@@ -54,8 +54,13 @@ import PaymentProcessorFallback from "../http/payment-processor-fallback";
   );
 
   while (true) {
-    console.log("WORKER 1: processPaymentUseCase");
-    await processPaymentUseCase.execute();
+    console.log(`${process.env.INSTANCE_ID}: processPaymentUseCase`);
+
+    await Promise.allSettled(
+      Array.from({ length: config.workers.processPayments.batchSize }).map(() =>
+        processPaymentUseCase.execute()
+      )
+    );
     Bun.sleepSync(config.workers.processPayments.interval);
   }
 })();

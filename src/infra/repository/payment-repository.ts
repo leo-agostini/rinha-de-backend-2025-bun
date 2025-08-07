@@ -9,7 +9,7 @@ export default class PaymentRepository implements IPaymentRepository {
   async create(payment: PaymentDAO): Promise<void> {
     await this.database.query(
       `
-      INSERT INTO transactions (correlation_id, requested_at, amount, processor, payment_status) VALUES ($1, $2, $3, $4, $5)
+      INSERT INTO transactions (correlation_id, requested_at, amount, processor) VALUES ($1, $2, $3, $4)
       ON CONFLICT (correlation_id) DO NOTHING`,
       [
         payment.correlationId,
@@ -24,7 +24,7 @@ export default class PaymentRepository implements IPaymentRepository {
     if (payments.length === 0) return;
     const values: any[] = [];
     const valuePlaceholders = payments.map((p, i) => {
-      const index = i * 5;
+      const index = i * 4;
       values.push(p.correlationId, p.requestedAt, p.amount, p.processor);
       return `($${index + 1}, $${index + 2}, $${index + 3}, $${index + 4})`;
     });
@@ -32,7 +32,6 @@ export default class PaymentRepository implements IPaymentRepository {
     const query = `
     INSERT INTO transactions (correlation_id, requested_at, amount, processor)
     VALUES ${valuePlaceholders.join(", ")}
-    ON CONFLICT (correlation_id) DO NOTHING
   `;
 
     await this.database.query(query, values);
@@ -53,12 +52,12 @@ export default class PaymentRepository implements IPaymentRepository {
     ).rows;
     return {
       default: {
-        totalAmount: Number(defaultPayments?.totalAmount) || 0,
-        totalRequests: Number(defaultPayments?.totalRequests) || 0,
+        totalAmount: +defaultPayments?.totalAmount || 0,
+        totalRequests: +defaultPayments?.totalRequests || 0,
       },
       fallback: {
-        totalAmount: Number(fallbackPayments?.totalAmount) || 0,
-        totalRequests: Number(fallbackPayments?.totalRequests) || 0,
+        totalAmount: +fallbackPayments?.totalAmount || 0,
+        totalRequests: +fallbackPayments?.totalRequests || 0,
       },
     };
   }

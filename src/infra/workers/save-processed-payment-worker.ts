@@ -12,8 +12,9 @@ import PaymentRepository from "../repository/payment-repository";
     paymentRepository,
     redisAdapter
   );
+
   while (true) {
-    console.log("WORKER 2: saveProcessedPaymentUseCase");
+    console.log(`${process.env.INSTANCE_ID}: saveProcessedPaymentUseCase`);
     await saveProcessedPaymentUseCase.execute();
     Bun.sleepSync(config.workers.saveProcessedPayments.interval);
   }

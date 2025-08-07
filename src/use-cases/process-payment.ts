@@ -1,6 +1,6 @@
 import config from "../config";
 import Cache from "../types/cache";
-import PaymentDTO, { PaymentDAO } from "../types/payment-dto";
+import PaymentDTO from "../types/payment-dto";
 import IPaymentGateway from "../types/payment-gateway";
 import ProcessorEnum from "../types/processor";
 
@@ -20,24 +20,25 @@ export default class ProcessPaymentUseCase {
 
     const paymentDTO = JSON.parse(payment) as PaymentDTO;
     let processor = ProcessorEnum.DEFAULT;
+
     try {
       await this.defaultPaymentGateway.process(paymentDTO);
     } catch (error) {
-      // processor = ProcessorEnum.FALLBACK;
-      // await this.fallbackPaymentGateway.process(paymentDTO).catch(() => {
-      //   throw error;
-      // });
-      await this.cache.lPush(toProcessPaymentsQueueName, payment);
+      processor = ProcessorEnum.FALLBACK;
+      try {
+        await this.fallbackPaymentGateway.process(paymentDTO);
+      } catch (fallbackError) {
+        await this.cache.lPush(toProcessPaymentsQueueName, payment);
+        return;
+      }
     }
-
-    const toSavePayment: PaymentDAO = {
-      ...paymentDTO,
-      processor,
-    };
 
     await this.cache.lPush(
       toSaveProcessedPaymentsQueueName,
-      JSON.stringify(toSavePayment)
+      JSON.stringify({
+        ...paymentDTO,
+        processor,
+      })
     );
   }
 }

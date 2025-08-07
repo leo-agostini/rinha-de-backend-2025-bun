@@ -11,7 +11,6 @@ CREATE UNLOGGED TABLE IF NOT EXISTS transactions (
 );
 
 CREATE INDEX idx_transactions ON transactions (requested_at, processor);
-
 -- WARNING
 -- this tool not being optimal
 -- for low memory systems
@@ -19,22 +18,23 @@ CREATE INDEX idx_transactions ON transactions (requested_at, processor);
 -- DB Version: 17
 -- OS Type: linux
 -- DB Type: oltp
--- Total Memory (RAM): 150 MB
--- Connections num: 80
+-- Total Memory (RAM): 115 MB
+-- CPUs num: 1
+-- Connections num: 50
 -- Data Storage: ssd
 
 ALTER SYSTEM SET
- max_connections = '550';
+ max_connections = '80';
 ALTER SYSTEM SET
- shared_buffers = '38400kB';
+ shared_buffers = '29440kB';
 ALTER SYSTEM SET
- effective_cache_size = '115200kB';
+ effective_cache_size = '88320kB';
 ALTER SYSTEM SET
- maintenance_work_mem = '9600kB';
+ maintenance_work_mem = '7360kB';
 ALTER SYSTEM SET
  checkpoint_completion_target = '0.9';
 ALTER SYSTEM SET
- wal_buffers = '1152kB';
+ wal_buffers = '883kB';
 ALTER SYSTEM SET
  default_statistics_target = '100';
 ALTER SYSTEM SET
@@ -42,7 +42,7 @@ ALTER SYSTEM SET
 ALTER SYSTEM SET
  effective_io_concurrency = '200';
 ALTER SYSTEM SET
- work_mem = '436kB';
+ work_mem = '507kB';
 ALTER SYSTEM SET
  huge_pages = 'off';
 ALTER SYSTEM SET

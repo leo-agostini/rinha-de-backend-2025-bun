@@ -6,6 +6,7 @@ export default class HttpClient implements IHttpClient {
 
   async post(url: string, body: any): Promise<any> {
     return axios.post(url, body, {
+      // signal: AbortSignal.timeout(1000),
       headers: {
         "Content-Type": "application/json",
       },

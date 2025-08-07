@@ -7,6 +7,13 @@ export interface DatabaseConnection {
   query(query: string, args: Primitive[]): Promise<QueryResult<any>>;
 }
 
+interface PoolConfig {
+  min: number;
+  max: number;
+  idleTimeoutMillis: number;
+  query_timeout: number;
+}
+
 export default class DatabasePgConnectionAdapter implements DatabaseConnection {
   pool: Pool;
 

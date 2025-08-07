@@ -7,6 +7,25 @@ import DatabasePgConnectionAdapter from "./infra/database/postgres-adapter";
 import RedisAdapter from "./infra/database/redis-adapter";
 import PaymentRepository from "./infra/repository/payment-repository";
 
+const {
+  workers: { processPayments, saveProcessedPayments },
+  server,
+} = config;
+
+const spawnProcessWorker = () => {
+  const processWorker = new Worker("./workers/process.js");
+  processWorker.on("message", (msg) => console.log("[process]", msg));
+  processWorker.on("error", (err) => console.error("[process ERROR]", err));
+  processWorker.on("exit", (code) => console.log("[process EXIT]", code));
+};
+
+const spawnSaveWorker = () => {
+  const saveWorker = new Worker("./workers/save.js");
+  saveWorker.on("message", (msg) => console.log("[save]", msg));
+  saveWorker.on("error", (err) => console.error("[save ERROR]", err));
+  saveWorker.on("exit", (code) => console.log("[save EXIT]", code));
+};
+
 (async () => {
   const redisAdapter = new RedisAdapter();
   await redisAdapter.connect();
@@ -18,20 +37,16 @@ import PaymentRepository from "./infra/repository/payment-repository";
     readPaymentRepository
   );
 
-  const processWorker = new Worker("./workers/process.js");
-  const saveWorker = new Worker("./workers/save.js");
-
-  processWorker.on("message", (msg) => console.log("[process]", msg));
-  processWorker.on("error", (err) => console.error("[process ERROR]", err));
-  processWorker.on("exit", (code) => console.log("[process EXIT]", code));
-
-  saveWorker.on("message", (msg) => console.log("[save]", msg));
-  saveWorker.on("error", (err) => console.error("[save ERROR]", err));
-  saveWorker.on("exit", (code) => console.log("[save EXIT]", code));
+  for (let i = 0; i < processPayments.numberOfWorkers; i++) {
+    spawnProcessWorker();
+  }
+  for (let i = 0; i < saveProcessedPayments.numberOfWorkers; i++) {
+    spawnSaveWorker();
+  }
 
   serve({
-    hostname: config.server.hostname,
-    port: config.server.port,
+    hostname: server.hostname,
+    port: server.port,
     routes: {
       "/": new Response("Hello World", { status: 200 }),
       "/payments-summary": (req) => paymentsSummaryController.execute(req),
