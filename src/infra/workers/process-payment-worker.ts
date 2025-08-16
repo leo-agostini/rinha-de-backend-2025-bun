@@ -56,7 +56,7 @@ import PaymentProcessorFallback from "../http/payment-processor-fallback";
   while (true) {
     console.log(`${process.env.INSTANCE_ID}: processPaymentUseCase`);
 
-    await Promise.allSettled(
+    await Promise.all(
       Array.from({ length: config.workers.processPayments.batchSize }).map(() =>
         processPaymentUseCase.execute()
       )

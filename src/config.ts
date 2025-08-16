@@ -1,4 +1,5 @@
 export default {
+  processedPaymentsKey: "processed-payments",
   circuitBreaker: {
     failureThreshold: 3,
     failureTimeout: 3,
@@ -15,22 +16,22 @@ export default {
     user: process.env.POSTGRES_USER,
     password: process.env.POSTGRES_PASSWORD,
     port: Number(process.env.POSTGRES_PORT),
-    min: 0,
-    max: 10,
-    idleTimeoutMillis: 10000,
-    query_timeout: 10000,
+    min: 2,
+    max: 5,
+    idleTimeoutMillis: 5000,
+    connectionTimeoutMillis: 1000,
   },
   workers: {
     saveProcessedPayments: {
-      numberOfWorkers: 2,
-      interval: 200,
-      batchSize: 3000,
+      numberOfWorkers: 1,
+      interval: 10,
+      batchSize: 50,
       queueName: `${process.env.INSTANCE_ID}:processed-payments`,
     },
     processPayments: {
       numberOfWorkers: 1,
-      interval: 600,
-      batchSize: 600,
+      interval: 250,
+      batchSize: 50,
       queueName: `${process.env.INSTANCE_ID}:process-payments`,
     },
   },

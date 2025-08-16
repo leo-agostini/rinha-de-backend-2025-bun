@@ -29,7 +29,7 @@ const spawnSaveWorker = () => {
 (async () => {
   const redisAdapter = new RedisAdapter();
   await redisAdapter.connect();
-  const readDatabaseConnection = new DatabasePgConnectionAdapter();
+  const readDatabaseConnection = DatabasePgConnectionAdapter;
   const readPaymentRepository = new PaymentRepository(readDatabaseConnection);
 
   const paymentsController = new PaymentsController(redisAdapter);

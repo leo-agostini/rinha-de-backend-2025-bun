@@ -24,17 +24,24 @@ export default class ProcessPaymentUseCase {
     try {
       await this.defaultPaymentGateway.process(paymentDTO);
     } catch (error) {
-      processor = ProcessorEnum.FALLBACK;
-      try {
-        await this.fallbackPaymentGateway.process(paymentDTO);
-      } catch (fallbackError) {
-        await this.cache.lPush(toProcessPaymentsQueueName, payment);
-        return;
-      }
+      await this.cache.lPush(toProcessPaymentsQueueName, payment);
+      return;
     }
 
+    // try {
+    //   await this.defaultPaymentGateway.process(paymentDTO);
+    // } catch (error) {
+    //   processor = ProcessorEnum.FALLBACK;
+    //   try {
+    //     await this.fallbackPaymentGateway.process(paymentDTO);
+    //   } catch (fallbackError) {
+    //     await this.cache.lPush(toProcessPaymentsQueueName, payment);
+    //     return;
+    //   }
+    // }
+
     await this.cache.lPush(
-      toSaveProcessedPaymentsQueueName,
+      config.processedPaymentsKey,
       JSON.stringify({
         ...paymentDTO,
         processor,
